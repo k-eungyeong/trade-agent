@@ -16,3 +16,9 @@ chroma_db/
 # IDE
 .vscode/
 .idea/
+
+echo venv/>> .gitignore
+echo .env>> .gitignore
+echo data/chroma_db/>> .gitignore
+echo __pycache__/>> .gitignore
+echo *.pyc>> .gitignore
