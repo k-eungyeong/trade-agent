@@ -3,6 +3,14 @@
 """
 from pathlib import Path
 import pdfplumber
+import base64
+import os
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 def load_txt(file_path: str) -> str:
@@ -30,14 +38,41 @@ def load_image(file_path: str, user_tag: str = None) -> dict:
     """
     이미지 파일 처리
     - user_tag가 있으면 수동 분류값 사용
-    - 없으면 GPT-4o Vision으로 자동 판별 (스캔문서 vs 단순사진)
+    - 없으면 Gemini Vision으로 자동 판별 (스캔문서 vs 단순사진)
 
     Returns:
         {"is_document": bool, "text": str | None, "category": str | None}
     """
-    # TODO: OpenAI Vision API 연동 예정
-    pass
+    with open(file_path, "rb") as f:
+        image_bytes = f.read()
 
+    prompt = """이 이미지를 분석해줘.
+1. 이 이미지가 문서(글자가 포함된 서류, 스캔본)인지, 아니면 단순 사진(글자 없는 사물/풍경 등)인지 판별해줘.
+2. 문서라면 이미지 안의 모든 텍스트를 그대로 추출해줘.
+
+아래 형식으로만 답해줘 (다른 설명 붙이지 말고):
+IS_DOCUMENT: true 또는 false
+TEXT: (문서인 경우 추출한 텍스트 전체, 아니면 없음)
+"""
+
+    response = client.models.generate_content(
+        model="gemini-flash-latest",
+        contents=[
+            types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
+            prompt
+        ]
+    )
+
+    result_text = response.text
+
+    is_document = "true" in result_text.split("TEXT:")[0].lower()
+    extracted_text = result_text.split("TEXT:")[-1].strip() if is_document else None
+
+    return {
+        "is_document": is_document,
+        "text": extracted_text,
+        "category": user_tag
+    }
 
 def load_document(file_path: str, user_tag: str = None) -> dict:
     """
