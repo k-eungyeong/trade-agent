@@ -43,19 +43,35 @@ def load_document(file_path: str, user_tag: str = None) -> dict:
     """
     파일 확장자에 따라 적절한 로더로 분기하는 진입점 함수
     """
-    ext = Path(file_path).suffix.lower()
+    path = Path(file_path)
 
-    if ext in [".txt", ".md"]:
-        text = load_txt(file_path)
-        return {"text": text, "file_type": ext, "is_document": True}
+    # 1. 파일 존재 여부 확인
+    if not path.exists():
+        raise FileNotFoundError(f"파일을 찾을 수 없습니다: {file_path}")
 
-    elif ext == ".pdf":
-        text = load_pdf(file_path)
-        return {"text": text, "file_type": "pdf", "is_document": True}
+    ext = path.suffix.lower()
 
-    elif ext in [".png", ".jpg", ".jpeg"]:
-        result = load_image(file_path, user_tag)
-        return {"file_type": "image", **result}
+    try:
+        if ext in [".txt", ".md"]:
+            text = load_txt(file_path)
+            return {"text": text, "file_type": ext, "is_document": True}
 
-    else:
-        raise ValueError(f"지원하지 않는 파일 형식: {ext}")
+        elif ext == ".pdf":
+            text = load_pdf(file_path)
+            return {"text": text, "file_type": "pdf", "is_document": True}
+
+        elif ext in [".png", ".jpg", ".jpeg"]:
+            result = load_image(file_path, user_tag)
+            return {"file_type": "image", **result}
+
+        else:
+            raise ValueError(f"지원하지 않는 파일 형식: {ext}")
+
+    except Exception as e:
+        # 2. 처리 중 에러가 나도 서버가 죽지 않게, 에러 정보를 담아 반환
+        return {
+            "text": None,
+            "file_type": ext,
+            "is_document": False,
+            "error": str(e),
+        }
