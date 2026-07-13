@@ -20,18 +20,26 @@ def load_txt(file_path: str) -> str:
         return f.read()
 
 
-def load_pdf(file_path: str) -> str:
-    """pdf 파일에서 텍스트 추출 (텍스트 기반 pdf)"""
-    text_parts = []
+def load_pdf_pages(file_path: str) -> list[str]:
+    """
+    pdf의 각 페이지 텍스트를 리스트로 반환
+    (페이지별로 따로 청킹하기 위해 페이지 구분을 유지)
+    """
+    pages = []
     with pdfplumber.open(file_path) as pdf:
-        for i, page in enumerate(pdf.pages):
+        for page in pdf.pages:
             page_text = page.extract_text()
             if page_text:
-                text_parts.append(page_text)
+                pages.append(page_text)
             else:
-                # 텍스트 추출 안 되면(스캔 pdf 가능성) 표시만 해둠
-                text_parts.append(f"[페이지 {i+1}: 텍스트 추출 실패 - 스캔 문서일 수 있음]")
-    return "\n\n".join(text_parts)
+                pages.append("[텍스트 추출 실패 - 스캔 문서일 수 있음]")
+    return pages
+
+
+def load_pdf(file_path: str) -> str:
+    """pdf 파일에서 텍스트 추출 (전체를 하나의 문자열로 합침) - load_document에서 사용"""
+    pages = load_pdf_pages(file_path)
+    return "\n\n".join(pages)
 
 
 def load_image(file_path: str, user_tag: str = None) -> dict:
