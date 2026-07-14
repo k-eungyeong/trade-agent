@@ -8,6 +8,11 @@ from sqlalchemy.orm import Session
 from app.db.database import engine, Base, get_db
 from app.db.models import ChatSession, Message
 from app.agent.reformat import reformat_answer
+from app.agent.draft import generate_draft, TEMPLATES
+from app.db.models import GeneratedDocument
+from app.agent.classifier import classify_request
+from app.agent.draft import extract_values_from_message, check_missing_fields
+
 
 app = FastAPI(title="TradeAgent")
 Base.metadata.create_all(bind=engine)
@@ -24,20 +29,28 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 def chat(request: ChatRequest, db: Session = Depends(get_db)):
-    # 세션이 없으면 새로 생성
     session_id = request.session_id or str(uuid.uuid4())
     if not db.query(ChatSession).filter(ChatSession.id == session_id).first():
         db.add(ChatSession(id=session_id))
         db.commit()
 
-    # 사용자 질문 저장
+    # 이 세션의 최근 대화 4개(질문+답변 2턴 정도)를 시간순으로 조회
+    recent_messages = (
+        db.query(Message)
+        .filter(Message.session_id == session_id)
+        .order_by(Message.id.desc())
+        .limit(4)
+        .all()
+    )
+    recent_messages.reverse()  # 오래된 순서로 다시 정렬
+    history = [{"role": m.role, "content": m.content} for m in recent_messages]
+
     db.add(Message(session_id=session_id, role="user", content=request.question, message_type="qna"))
     db.commit()
 
-    # 답변 생성
-    result = answer_question(request.question)
+    # history를 함께 전달
+    result = answer_question(request.question, history=history)
 
-    # AI 답변 저장 (출처 정보는 JSON 문자열로 변환해서 저장)
     db.add(Message(
         session_id=session_id,
         role="assistant",
@@ -63,3 +76,90 @@ def reformat(request: ReformatRequest, db: Session = Depends(get_db)):
         custom_instruction=request.custom_instruction
     )
     return {"reformatted_answer": result}
+
+class DraftRequest(BaseModel):
+    session_id: str
+    template_type: str
+    values: dict
+
+@app.post("/draft")
+def draft(request: DraftRequest, db: Session = Depends(get_db)):
+    result = generate_draft(request.template_type, request.values)
+
+    # 생성된 초안을 DB에 저장
+    doc = GeneratedDocument(
+        session_id=request.session_id,
+        template_type=request.template_type,
+        output_content=result
+    )
+    db.add(doc)
+    db.commit()
+
+    return {"draft": result}
+
+class AskRequest(BaseModel):
+    message: str
+    session_id: str = None
+
+@app.post("/ask")
+def ask(request: AskRequest, db: Session = Depends(get_db)):
+    session_id = request.session_id or str(uuid.uuid4())
+    if not db.query(ChatSession).filter(ChatSession.id == session_id).first():
+        db.add(ChatSession(id=session_id))
+        db.commit()
+
+    recent_messages = (
+        db.query(Message)
+        .filter(Message.session_id == session_id)
+        .order_by(Message.id.desc())
+        .limit(4)
+        .all()
+    )
+    recent_messages.reverse()
+    history = [{"role": m.role, "content": m.content} for m in recent_messages]
+
+    db.add(Message(session_id=session_id, role="user", content=request.message, message_type="qna"))
+    db.commit()
+
+    # 1) 요청 분류
+    classification = classify_request(request.message, history)
+    req_type = classification.get("type", "qna")
+
+    # 2) 분류 결과에 따라 분기 처리
+    if req_type == "reformat":
+        answer_text = reformat_answer(
+            session_id=session_id,
+            db=db,
+            format_type=classification.get("format_type") or "custom",
+            custom_instruction=request.message
+        )
+        result = {"answer": answer_text, "sources": []}
+
+    elif req_type == "draft":
+        template_type = classification.get("template_type")
+        if not template_type or template_type not in TEMPLATES:
+            result = {"answer": f"어떤 양식의 문서를 작성할지 확인이 필요합니다. 지원 양식: {list(TEMPLATES.keys())}", "sources": []}
+        else:
+            values = extract_values_from_message(request.message, template_type, history)
+            missing = check_missing_fields(template_type, values)
+            if missing:
+                result = {"answer": f"문서 작성을 위해 아래 정보가 더 필요합니다: {', '.join(missing)}", "sources": []}
+            else:
+                draft_text = generate_draft(template_type, values)
+                result = {"answer": draft_text, "sources": []}
+                db.add(GeneratedDocument(session_id=session_id, template_type=template_type, output_content=draft_text))
+                db.commit()
+
+    else:  # qna
+        result = answer_question(request.message, history=history)
+
+    db.add(Message(
+        session_id=session_id,
+        role="assistant",
+        content=result["answer"],
+        message_type=req_type,
+        source_chunks=json.dumps(result.get("sources", []), ensure_ascii=False)
+    ))
+    db.commit()
+
+    return {**result, "session_id": session_id, "request_type": req_type}

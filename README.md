@@ -9,9 +9,10 @@
 ## 주요 기능
 
 - 무역서류 기반 질의응답 (RAG)
-- 답변 재가공 (요약 / 표 / 체크리스트 변환)
+- 이전 대화 맥락을 반영한 연속 질의응답
+- 답변 재가공 (요약 / 표 / 불릿 변환)
 - 문서 초안 생성 (원산지증명서 신청서 등 템플릿 기반)
-- 대화 이력 저장 및 조회
+- 대화 이력 저장 및 조회 (SQLite)
 
 ## 기술 스택
 
@@ -20,8 +21,8 @@
 | 프론트엔드 | HTML, CSS, Vanilla JS |
 | 백엔드 | FastAPI |
 | RAG / 에이전트 | LangChain, Chroma |
-| LLM | OpenAI API |
-| 데이터베이스 | SQLite |
+| LLM / 임베딩 | Google Gemini API (gemini-flash-latest, gemini-embedding-001) |
+| 데이터베이스 | SQLite (SQLAlchemy) |
 | 배포 | Render / Railway |
 
 ## 폴더 구조
@@ -29,16 +30,32 @@
 ```
 trade-agent/
 ├── app/
-│   ├── main.py              # FastAPI 진입점
-│   ├── rag/                 # 문서 로딩, 임베딩, 검색
-│   ├── agent/                # 요청 분류, 재가공, 문서 생성
-│   └── db/                   # SQLite 모델 및 CRUD
+│   ├── main.py                # FastAPI 진입점
+│   ├── agent/                 # 요청 분류, 재가공(reformat), 문서초안 생성(draft)
+│   │   ├── draft.py
+│   │   └── reformat.py
+│   ├── db/                    # SQLite 모델 및 세션 관리
+│   │   ├── database.py
+│   │   └── models.py
+│   └── rag/                   # 문서 로딩, 청킹, 임베딩, 검색, RAG 체인
+│       ├── chain.py
+│       ├── embeddings.py
+│       ├── loader.py
+│       ├── pipeline.py
+│       └── splitter.py
 ├── data/
-│   ├── raw/                  # 원본 수집 자료
-│   └── processed/            # 전처리된 텍스트
-├── frontend/                 # 채팅 UI
-└── tests/
-```
+│   ├── raw/                   # 원본 수집 자료 (16개)
+│   ├── processed/             # 전처리 데이터 (예정)
+│   ├── chroma_db/             # Chroma 벡터 저장소
+│   └── trade_agent.db         # SQLite 대화 이력 DB
+├── frontend/                  # 채팅 UI
+├── static/                    # 정적 파일 
+├── tests/                     # 테스트 코드 (예정)
+├── build_index.py             # data/raw/ 전체를 Chroma에 인덱싱하는 배치 스크립트
+├── .env                       # 환경변수 (git 제외)
+├── .env.example               # 환경변수 예시
+├── requirements.txt
+└── README.md
 
 ## 실행 방법
 
@@ -50,10 +67,13 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # 2. 패키지 설치
 pip install -r requirements.txt
 
-# 3. 환경변수 설정 (.env 파일에 OPENAI_API_KEY 입력)
+# 3. 환경변수 설정 (.env 파일에 GEMINI_API_KEY 입력)
 cp .env.example .env
 
-# 4. 서버 실행
+# 4. 문서 인덱싱 (최초 1회, data/raw/ 전체를 Chroma에 저장)
+python build_index.py
+
+# 5. 서버 실행
 uvicorn app.main:app --reload
 ```
 
@@ -88,9 +108,10 @@ uvicorn app.main:app --reload
 ## 진행 상황
 
 - [x] 무역서류 자료 수집 (16개)
-- [ ] RAG 파이프라인 구축
-- [ ] FastAPI 서버 구현
-- [ ] 요청 분류 및 처리 로직
+- [x] RAG 파이프라인 구축 (로딩 → 청킹 → 임베딩 → 검색)
+- [x] FastAPI 서버 구현 (/chat, /reformat, /draft)
+- [x] 요청 분류 및 처리 로직 (재가공, 문서초안 생성)
+- [x] 대화 이력 저장 및 맥락 반영 (SQLite)
 - [ ] 프론트엔드 UI
 - [ ] 배포
 
