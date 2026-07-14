@@ -21,7 +21,7 @@
 | 프론트엔드 | HTML, CSS, Vanilla JS |
 | 백엔드 | FastAPI |
 | RAG / 에이전트 | LangChain, Chroma |
-| LLM / 임베딩 | Google Gemini API (gemini-flash-latest, gemini-embedding-001) |
+| LLM / 임베딩 | Google Gemini API (gemini-flash-lite-latest, gemini-embedding-001) |
 | 데이터베이스 | SQLite (SQLAlchemy) |
 | 배포 | Render / Railway |
 
@@ -110,10 +110,22 @@ uvicorn app.main:app --reload
 - [x] 무역서류 자료 수집 (16개)
 - [x] RAG 파이프라인 구축 (로딩 → 청킹 → 임베딩 → 검색)
 - [x] FastAPI 서버 구현 (/chat, /reformat, /draft)
-- [x] 요청 분류 및 처리 로직 (재가공, 문서초안 생성)
+- [x] 요청 분류 로직 (/ask 엔드포인트로 qna/reformat/draft 자동 분류)
 - [x] 대화 이력 저장 및 맥락 반영 (SQLite)
 - [ ] 프론트엔드 UI
 - [ ] 배포
+
+## 트러블슈팅 노트
+
+- **Gemini 모델 세대교체 이슈**: 개발 중 Google이 2.5 시리즈 전체를 유료 전용으로 전환하면서,
+  기존 모델(gemini-2.5-flash 등)이 신규 계정에서 404 에러로 막히는 상황을 겪음.
+  특정 버전을 하드코딩하지 않고 `-latest` 별칭을 쓰되, 무료 티어 일일 한도가 모델마다
+  크게 다르다는 점(gemini-flash-latest: 20회/일 vs gemini-flash-lite-latest: 훨씬 여유)을
+  확인하고 요청 빈도가 높은 구조(분류+검색어재구성+답변생성)에 맞춰 flash-lite 계열로 전환.
+- **RAG 검색의 대명사 처리 한계**: "방금 그거 요약해줘" 같은 질문은 LLM은 문맥을 이해해도
+  벡터 검색 단계에서는 원문 그대로 비교되어 엉뚱한 문서가 검색되는 문제 발견.
+  검색 전에 이전 대화를 참고해 질문을 완전한 형태로 재구성(query rewriting)하는 단계를
+  추가해 해결.
 
 ## License
 
