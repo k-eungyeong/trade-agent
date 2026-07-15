@@ -111,7 +111,8 @@ uvicorn app.main:app --reload
 - [x] FastAPI 서버 구현 (/chat, /reformat, /draft)
 - [x] 요청 분류 로직 (/ask 엔드포인트로 qna/reformat/draft 자동 분류)
 - [x] 대화 이력 저장 및 맥락 반영 (SQLite)
-- [ ] 프론트엔드 UI
+- [x] 프론트엔드 UI (채팅 화면, /ask 연동, 마크다운 렌더링)
+- [x] CORS 설정 및 에러 핸들링
 - [ ] 배포
 
 ## 트러블슈팅 노트
