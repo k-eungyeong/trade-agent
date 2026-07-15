@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeAgent — 무역서류 AI 어시스턴트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  .ai-card table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+    display: block;
+    overflow-x: auto;
+  }
+  :root {
+    --navy: #1B2A4A;
+    --navy-light: #2C3F66;
+    --paper: #F7F5F0;
+    --card: #FFFFFF;
+    --gold: #B08D57;
+    --gold-light: #E8DCC4;
+    --ink: #1A1A1A;
+    --ink-soft: #5A5850;
+    --line: #D8D3C8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+  }
+
+  .app {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+  }
+
+  header {
+    background: var(--navy);
+    color: var(--paper);
+    padding: 28px 32px 22px;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  header .logo-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  header h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+
+  header .doc-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--gold-light);
+    letter-spacing: 1px;
+  }
+
+  header p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #C7CEDD;
+  }
+
+  main {
+    flex: 1;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .msg-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 82%;
+  }
+
+  .msg-row.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  .msg-row.ai {
+    align-self: flex-start;
+    align-items: flex-start;
+    max-width: 90%;
+  }
+
+  .bubble-user {
+    background: var(--navy);
+    color: var(--paper);
+    padding: 12px 18px;
+    border-radius: 14px 14px 2px 14px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .ai-card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gold);
+    border-radius: 2px 12px 12px 12px;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .ai-card table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+  .ai-card th, .ai-card td {
+    border: 1px solid var(--line);
+    padding: 6px 10px;
+    text-align: left;
+  }
+  .ai-card th {
+    background: var(--gold-light);
+    color: var(--navy);
+  }
+
+  .stamp {
+    position: absolute;
+    top: -10px;
+    right: -8px;
+    width: 46px;
+    height: 46px;
+    border: 1.5px solid var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-9deg);
+    background: rgba(176, 141, 87, 0.06);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--gold);
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+  }
+
+  .sources {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .source-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--navy);
+    background: var(--gold-light);
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+  }
+  .sources-label {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+    margin-right: 4px;
+    align-self: center;
+  }
+
+  .actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--navy);
+    background: transparent;
+    border: 1px solid var(--navy);
+    border-radius: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .action-btn:hover {
+    background: var(--navy);
+    color: var(--paper);
+  }
+
+  footer {
+    padding: 18px 32px 24px;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    background: var(--card);
+    border: 1.5px solid var(--navy);
+    border-radius: 8px;
+    padding: 6px 6px 6px 16px;
+  }
+
+  .input-row input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    padding: 10px 0;
+  }
+
+  .input-row input::placeholder {
+    color: #A6A398;
+  }
+
+  .send-btn {
+    background: var(--navy);
+    color: var(--paper);
+    border: none;
+    border-radius: 6px;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  .send-btn:hover {
+    background: var(--navy-light);
+  }
+
+  .footer-hint {
+    margin: 10px 4px 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .loading-dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 4px 0;
+  }
+
+  .loading-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: dot-pulse 1.2s infinite ease-in-out;
+  }
+
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dot-pulse {
+    0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1.1); }
+  }
+
+  .loading-text {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-left: 4px;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo-row">
+      <h1>TradeAgent</h1>
+      <span class="doc-number">DOC. NO. TA-2026-001</span>
+    </div>
+    <p>무역서류 기반 질의응답 · 재가공 · 문서초안 생성</p>
+  </header>
+
+  <main id="chat">
+
+
+  </main>
+
+  <footer>
+    <div class="input-row">
+      <input type="text" id="question-input" placeholder="무역서류에 대해 질문해보세요">
+      <button class="send-btn" id="send-btn">전송</button>
+    </div>
+    <p class="footer-hint">Enter로 전송 · 이전 답변을 이어서 재가공하거나 문서초안을 요청할 수 있습니다</p>
+  </footer>
+
+</div>
+
+<script>
+  let sessionId = null;
+
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('question-input');
+  const sendBtn = document.getElementById('send-btn');
+
+  function addUserMessage(text) {
+    const row = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML = `<div class="bubble-user"></div>`;
+    row.querySelector('.bubble-user').textContent = text;
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function addAiMessage(answer, sources, requestType) {
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+
+    const sourcesHtml = (sources && sources.length > 0)
+      ? `<div class="sources">
+          <span class="sources-label">출처</span>
+          ${sources.map(s => `<span class="source-tag">${s.file}${s.page ? ' p.' + s.page : ''}</span>`).join('')}
+        </div>`
+      : '';
+
+    const actionsHtml = (requestType === 'qna')
+      ? `<div class="actions">
+          <button class="action-btn" data-action="table">표로 정리</button>
+          <button class="action-btn" data-action="summary">3줄 요약</button>
+          <button class="action-btn" data-action="draft">신청서 작성</button>
+        </div>`
+      : '';
+
+    row.innerHTML = `
+      <div class="ai-card">
+        <div class="stamp">AI<br>검토</div>
+        <div class="answer-text"></div>
+        ${sourcesHtml}
+        ${actionsHtml}
+      </div>
+    `;
+    row.querySelector('.answer-text').innerHTML = marked.parse(answer);
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+
+    row.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        if (action === 'table') sendMessage('방금 그거 표로 정리해줘');
+        if (action === 'summary') sendMessage('방금 그거 3줄로 요약해줘');
+        if (action === 'draft') sendMessage('방금 내용 관련 신청서 초안 작성해줘');
+      });
+    });
+  }
+
+  function addLoadingMessage() {
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.id = 'loading-row';
+    row.innerHTML = `
+      <div class="ai-card" style="display: flex; align-items: center; gap: 8px;">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <span class="loading-text">문서 검색 중...</span>
+      </div>
+    `;
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function removeLoadingMessage() {
+    const el = document.getElementById('loading-row');
+    if (el) el.remove();
+  }
+
+  async function sendMessage(message) {
+    if (!message.trim()) return;
+
+    addUserMessage(message);
+    input.value = '';
+    addLoadingMessage();
+
+    try {
+      const response = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: message,
+          session_id: sessionId
+        })
+      });
+
+      removeLoadingMessage();
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('서버 오류:', response.status, errText);
+        addAiMessage(`요청 처리 중 오류가 발생했습니다. (${response.status})`, [], null);
+        return;
+      }
+
+      const data = await response.json();
+      sessionId = data.session_id;
+      addAiMessage(data.answer, data.sources, data.request_type);
+
+    } catch (err) {
+      removeLoadingMessage();
+      addAiMessage('서버에 연결할 수 없습니다. 서버가 켜져 있는지 확인해주세요.', [], null);
+      console.error(err);
+    }
+  }
+
+  sendBtn.addEventListener('click', () => sendMessage(input.value));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage(input.value);
+  });
+</script>
+</body>
+</html>

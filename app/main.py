@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Depends
+from fastapi import Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from app.rag.chain import answer_question
 import uuid
 import json
@@ -12,10 +15,19 @@ from app.agent.draft import generate_draft, TEMPLATES
 from app.db.models import GeneratedDocument
 from app.agent.classifier import classify_request
 from app.agent.draft import extract_values_from_message, check_missing_fields
+from typing import Optional
 
 
 app = FastAPI(title="TradeAgent")
 Base.metadata.create_all(bind=engine)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 개발 단계에서는 전체 허용, 배포 시 실제 도메인으로 제한 권장
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -25,7 +37,7 @@ def health_check():
 
 class ChatRequest(BaseModel):
     question: str
-    session_id: str = None   # 없으면 새 세션 시작
+    session_id: Optional[str] = None
 
 @app.post("/chat")
 def chat(request: ChatRequest, db: Session = Depends(get_db)):
@@ -65,7 +77,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
 class ReformatRequest(BaseModel):
     session_id: str
     format_type: str = "custom"
-    custom_instruction: str = None
+    custom_instruction: Optional[str] = None
 
 @app.post("/reformat")
 def reformat(request: ReformatRequest, db: Session = Depends(get_db)):
@@ -97,9 +109,17 @@ def draft(request: DraftRequest, db: Session = Depends(get_db)):
 
     return {"draft": result}
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"예상치 못한 에러 발생: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"answer": "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "sources": [], "session_id": None}
+    )
+
 class AskRequest(BaseModel):
-    message: str
-    session_id: str = None
+    message: str = Field(..., min_length=1, max_length=2000)
+    session_id: Optional[str] = None
 
 @app.post("/ask")
 def ask(request: AskRequest, db: Session = Depends(get_db)):

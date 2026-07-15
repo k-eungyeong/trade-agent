@@ -48,8 +48,7 @@ trade-agent/
 │   ├── processed/             # 전처리 데이터 (예정)
 │   ├── chroma_db/             # Chroma 벡터 저장소
 │   └── trade_agent.db         # SQLite 대화 이력 DB
-├── frontend/                  # 채팅 UI
-├── static/                    # 정적 파일 
+├── static/                    # 정적 파일 (채팅 UI)
 ├── tests/                     # 테스트 코드 (예정)
 ├── build_index.py             # data/raw/ 전체를 Chroma에 인덱싱하는 배치 스크립트
 ├── .env                       # 환경변수 (git 제외)
