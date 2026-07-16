@@ -5,7 +5,7 @@ __pycache__/
 .env
 
 # Vector DB
-chroma_db/
+# chroma_db/
 
 # Data (원본 자료는 저작권/용량 이슈로 커밋하지 않는 것을 권장, 필요시 이 줄 제거)
 # data/raw/
