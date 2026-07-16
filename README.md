@@ -23,7 +23,7 @@
 | RAG / 에이전트 | LangChain, Chroma |
 | LLM / 임베딩 | Google Gemini API (gemini-flash-lite-latest, gemini-embedding-001) |
 | 데이터베이스 | SQLite (SQLAlchemy) |
-| 배포 | Render / Railway |
+| 배포 | Render |
 
 ## 폴더 구조
 
@@ -45,11 +45,9 @@ trade-agent/
 │       └── splitter.py
 ├── data/
 │   ├── raw/                   # 원본 수집 자료 (16개)
-│   ├── processed/             # 전처리 데이터 (예정)
 │   ├── chroma_db/             # Chroma 벡터 저장소
 │   └── trade_agent.db         # SQLite 대화 이력 DB
 ├── static/                    # 정적 파일 (채팅 UI)
-├── tests/                     # 테스트 코드 (예정)
 ├── build_index.py             # data/raw/ 전체를 Chroma에 인덱싱하는 배치 스크립트
 ├── .env                       # 환경변수 (git 제외)
 ├── .env.example               # 환경변수 예시
@@ -81,6 +79,27 @@ uvicorn app.main:app --reload
 - 1주차: 데이터 수집 + RAG 코어 구축
 - 2주차: API 서버 + 요청 처리(재가공·문서초안) 기능
 - 3주차: 프론트엔드 + 배포
+
+- ## 개발 일정
+
+- 1주차: 데이터 수집 + RAG 코어 구축
+- 2주차: API 서버 + 요청 처리(재가공·문서초안) 기능
+- 3주차: 프론트엔드 + 배포
+
+**실제 진행 내역**
+
+당초 3주(21일) 계획으로 설계했으나, 실질적으로 약 10일(7/6~7/16) 만에
+전체 기능 구현부터 배포까지 완료했습니다.
+
+| 구분 | 계획 | 실제 |
+|---|---|---|
+| RAG 코어 구축 | 1주 (Day 1~7) | Day 1~8 (7/6~7/13) |
+| API + 요청처리 기능 | 2주 (Day 8~14) | Day 9 (7/14) — 하루에 통합 완료 |
+| 프론트엔드 + 배포 | 3주 (Day 15~21) | Day 10~11 (7/15~7/16) |
+
+일정 압축이 가능했던 이유는, RAG 파이프라인의 각 단계(로더 → 청커 → 임베딩 → 검색 → 생성)를
+독립적인 모듈로 설계해 두어 이후 기능(재가공, 문서초안, 요청 분류)을 추가할 때
+기존 구조를 그대로 재사용할 수 있었기 때문입니다.
 
 ## 자료 목록 (data/raw/)
 
