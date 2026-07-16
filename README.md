@@ -113,7 +113,7 @@ uvicorn app.main:app --reload
 - [x] 대화 이력 저장 및 맥락 반영 (SQLite)
 - [x] 프론트엔드 UI (채팅 화면, /ask 연동, 마크다운 렌더링)
 - [x] CORS 설정 및 에러 핸들링
-- [ ] 배포
+- [x] 배포 (Render)
 
 ## 트러블슈팅 노트
 
@@ -144,6 +144,12 @@ uvicorn app.main:app --reload
 
 이후 신뢰할 수 있는 소스(관세청 API, 공식 고시 등)로 검색 범위를 한정한
 웹 검색 보완 기능을 추가하는 방향으로 확장 가능합니다.
+
+## 배포 주소
+
+https://trade-agent-avt8.onrender.com/static/index.html
+
+(무료 티어 특성상 15분간 미사용 시 서버가 잠들며, 첫 요청 시 재기동에 30~60초 정도 소요될 수 있습니다.)
 
 ## License
 
